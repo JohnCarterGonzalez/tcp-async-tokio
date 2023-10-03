@@ -39,8 +39,12 @@ async fn main() -> anyhow::Result<()> { // update fn signature to return anyhow
     let listener = TcpListener::bind("127.0.0.1:6379").await?;
 
     // handle incoming connections
+    // prefer tokio::spawn over await? in the case of mutiple concurrent connections
+    // tokio::spawn creates a new asynchronous task and immediately returns it allowing
+    // the program to continue running, stream_handler will now run concurrently
+    // allowing mutiple clients to be handled
     loop {
         let (stream, _addr) = listener.accept().await?;
-        stream_handler(stream).await?;
+        tokio::spawn(stream_handler(stream));
     }
 }
