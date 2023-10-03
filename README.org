@@ -1,0 +1,16 @@
+#+title: tcp-async-tokio
+#+author: John Carter Gonzalez
+
+* Implement an asynchronous runtime with Tokio
++ The Why?
+  - develop a deeper understanding of TCP, and varying Protocols
+  - Redis is a very popular protocol, with obvious benefits of getting familar with it
++ The How?
+  - studying [[https://docs.rs/tokio/latest/tokio/][tokios]] runtime documentation
+  - studying [[https://redis.io/docs/reference/protocol-spec/][redis']] protocol documentation
+
+Note: To run this project
+1. Ensure you have `cargo (1.54)` installed locally
+2. Run `./spawn_redis_server.sh` to run your Redis server, which is implemented
+   in `src/main.rs`. This command compiles your Rust project, so it might be
+   slow the first time you run it. Subsequent runs will be fast.
