@@ -9,6 +9,12 @@ use tokio::{
         TcpListener
     }}; //tokio magic
 
+// stream_handler asynchronously handle TCP streams
+// splits the read and write parts and wraps
+// the read into a buffer, loops through the buffer
+// if a line starts with PING, it writes back PONG
+// after handling it clears the buffer
+// @returns stream_handler() -> mut TcpStream -> 'Result
 async fn stream_handler(mut stream: TcpStream) -> anyhow::Result<()> {
     let (read, mut write) = stream.split();
 
