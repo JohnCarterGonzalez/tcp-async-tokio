@@ -1,13 +1,5 @@
-use tokio::{
-    io::{
-        AsyncBufReadExt,
-        AsyncWriteExt,
-        BufReader
-    },
-    net::{
-        TcpStream,
-        TcpListener
-    }}; //tokio magic
+use tokio::net::TcpListener;
+use redis_starter_rust::run::run_server;
 
 // tokio's runtime for async handling
 #[tokio::main]
