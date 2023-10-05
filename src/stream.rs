@@ -45,7 +45,7 @@ pub async fn stream_handler(mut stream: TcpStream) -> anyhow::Result<()> {
     }
 
     if resp_builder != RespBuilder::default() {
-        dgb!("bad or incomplete request");
+        dbg!("bad or incomplete request");
     }
 
     Ok(())

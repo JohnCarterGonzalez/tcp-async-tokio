@@ -24,7 +24,7 @@ pub enum RespBuilder {
 impl RespBuilder {
     pub fn feed_string(self, s: String) -> anyhow::Result<ControlFlow<RespData, RespBuilder>> {
         match self {
-            RespBuilder::NotInitialized => Self::inititalize(s),
+            RespBuilder::NotInitialized => Self::initialize(s),
             RespBuilder::ArrayBuilder {
                 size,
                 data,
