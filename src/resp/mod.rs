@@ -1,3 +1,4 @@
+use crate::redis_server::internal_state::RedisInternalState;
 use anyhow::bail;
 use std::collections::VecDeque;
 use tokio::io::{AsyncWrite, AsyncWriteExt};
@@ -31,12 +32,12 @@ pub enum RespData {
 impl RespData {
     // handles different types of data and execute the corresponding command
     // if data: str -> result 'str command
-    pub(crate) async fn run(self, write: &mut (impl AsyncWrite + Unpin)) -> anyhow::Result<()> {
+    pub(crate) async fn run(self, write: &mut (impl AsyncWrite + Unpin), state: &mut RedisInternalState) -> anyhow::Result<()> {
         dbg!(&self);
         let result = match self {
-            RespData::SimpleString(s) | RespData::BulkString(s) => run_cmd(&s, Default::default()),
+            RespData::SimpleString(s) | RespData::BulkString(s) => run_simple_cmd(&s),
             RespData::Integer(_i) => unimplemented!("Integer"),
-            RespData::Array(data) => run_array(data),
+            RespData::Array(data) => run_array(data, state),
             RespData::Null => unimplemented!("Null"),
         }?;
         write.write_all(&result.to_u8_vec()).await?;
@@ -60,20 +61,55 @@ impl RespData {
     }
 }
 
-fn run_cmd(cmd: &str, mut args: VecDeque<RespData>) -> anyhow::Result<RespData> {
+fn run_simple_cmd(cmd: &str) -> anyhow::Result<RespData> {
     match cmd.to_ascii_uppercase().as_str() {
         "PING" => Ok(RespData::SimpleString("PONG".to_string())),
-        "ECHO" => Ok(args.pop_front().unwrap_or(RespData::Null)),
-        _ => bail!("run_string for {}", cmd),
+        _ => bail!("run_simple_cmd for {}", cmd),
     }
 }
 
-fn run_array(mut data: VecDeque<RespData>) -> anyhow::Result<RespData> {
+fn run_cmd( cmd: &str, mut args: VecDeque<RespData>, state: &mut RedisInternalState, ) -> anyhow::Result<RespData> {
+    match cmd.to_ascii_uppercase().as_str() {
+        "PING" => run_simple_cmd(cmd),
+        "ECHO" => Ok(args.pop_front().unwrap_or(RespData::Null)),
+        "SET" => {
+            let Some(RespData::BulkString(key) | RespData::SimpleString(key)) = args.pop_front()
+            else {
+                bail!("SET key is not bulkString");
+            };
+
+            let Some(RespData::BulkString(value) | RespData::SimpleString(value)) = args.pop_front()
+            else {
+                bail!("SET value is not bulkString");
+            };
+
+            state.set(key, value);
+
+            Ok(RespData::SimpleString("OK".to_string()))
+        }
+        "GET" => {
+            let Some(RespData::BulkString(key) | RespData::SimpleString(key)) = args.pop_front()
+            else {
+                bail!("SET key is not bulkString");
+            };
+
+            let value = state.get(&key).cloned();
+
+            match value {
+                None => Ok(RespData::Null),
+                Some(value) => Ok(RespData::BulkString(value)),
+            }
+        }
+        _ => bail!("run_cmd for {}", cmd),
+    }
+}
+
+fn run_array(mut data: VecDeque<RespData>, state: &mut RedisInternalState, ) -> anyhow::Result<RespData> {
     let Some(cmd) = data.pop_front() else {
         bail!("empty array");
     };
     match cmd {
-        RespData::SimpleString(s) | RespData::BulkString(s) => run_cmd(&s, data),
+        RespData::SimpleString(s) | RespData::BulkString(s) => run_cmd(&s, data, state),
         _ => bail!("run_array for {:?}", cmd),
     }
 }

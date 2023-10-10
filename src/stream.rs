@@ -1,8 +1,10 @@
 use std::ops::ControlFlow;
+
 use tokio::io::{ AsyncBufReadExt, BufReader };
 use tokio::net::TcpStream;
 
 use crate::resp::builder::RespBuilder;
+use crate::redis_server::internal_state::RedisInternalState;
 
 // stream_handler asynchronously handle TCP streams
 // splits the read and write parts and wraps
@@ -17,6 +19,8 @@ pub async fn stream_handler(mut stream: TcpStream) -> anyhow::Result<()> {
     let mut buf = String::new();
 
     let mut resp_builder = RespBuilder::default();
+
+    let mut state = RedisInternalState::default();
 
     while buf_read.read_line(&mut buf).await? > 0 {
         if !buf.ends_with("\r\n") {
@@ -36,7 +40,7 @@ pub async fn stream_handler(mut stream: TcpStream) -> anyhow::Result<()> {
             }
             ControlFlow::Break(resp_data) => {
                 dbg!(&resp_data);
-                resp_data.run(&mut write).await?;
+                resp_data.run(&mut write, &mut state).await?;
                 resp_builder = RespBuilder::default();
             }
         }
