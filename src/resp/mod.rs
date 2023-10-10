@@ -56,7 +56,8 @@ impl RespData {
                 }
                 result
             }
-            RespData::Null => "_\r\n".to_string().into_bytes(),
+            // Representation of Null in the Redis Protocol -> "$-1\r\n"
+            RespData::Null => "$-1\r\n".to_string().into_bytes(),
         }
     }
 }
@@ -83,7 +84,27 @@ fn run_cmd( cmd: &str, mut args: VecDeque<RespData>, state: &mut RedisInternalSt
                 bail!("SET value is not bulkString");
             };
 
-            state.set(key, value);
+            // "PX" arg
+            let is_expiry = args.pop_front().is_some();
+            let mut expiry = None;
+
+            if is_expiry {
+                let arg = args.pop_front();
+
+                if let Some(RespData::BulkString(s) | RespData::SimpleString(s)) = arg.as_ref() {
+                    expiry = Some(s.parse::<i64>()?);
+                }
+
+                if let Some(RespData::Integer(i)) = arg {
+                    expiry = Some(i)
+                }
+
+                if expiry.is_none() {
+                   bail!("SET PX is not Integer");
+                }
+            }
+
+            state.set(key, value, expiry)?;
 
             Ok(RespData::SimpleString("OK".to_string()))
         }
