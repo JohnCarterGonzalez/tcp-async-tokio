@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use redis_starter_rust::run::run_server;
+    use tcp_async_tokio::run::run_server;
     use std::net::{IpAddr, SocketAddr};
     use std::time::Duration;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
